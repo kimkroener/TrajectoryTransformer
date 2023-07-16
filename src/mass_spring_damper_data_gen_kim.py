@@ -5,9 +5,10 @@ from scipy import linalg
 from scipy import signal
 from sklearn.model_selection import train_test_split
 from scipy.stats import qmc
+import pandas as pd
 # set up matplotlib
 plt.rcParams.update({
-    "text.usetex": True,
+    "text.usetex": False,
 })
 
 
@@ -168,3 +169,9 @@ for x_ in x_test:
 plt.xlabel('t (s)')
 plt.title('position x(t)')
 plt.show(block=False)
+
+# %% export generated data
+np.save("../data/SISO_three-masses/x_train",x_train)
+np.save("../data/SISO_three-masses/x_test",x_test)
+np.save("../data/SISO_three-masses/u_train",u_train)
+np.save("../data/SISO_three-masses/u_test",u_test)
