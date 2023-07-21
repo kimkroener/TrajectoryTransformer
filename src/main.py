@@ -1,22 +1,23 @@
 # %% Imports
-from msd_transformer_tf import TransformerModel
-from encoder import EncoderLayer
-from decoder import DecoderLayer
-
 import numpy as np
 from numpy import random
 import matplotlib.pyplot as plt
+from time import time
 
-# %% load data 
+import tensorflow as tf 
+from tensorflow.keras.losses import sparse_categorical_crossentropy
+from tensorflow.keras.optimizers import Adam
 
-u_train = np.load("../data/SISO_three-masses/u_train.npy")
-u_test = np.load("../data/SISO_three-masses/u_test.npy")
-x_train = np.load("../data/SISO_three-masses/x_train.npy")
-x_test = np.load("../data/SISO_three-masses/x_test.npy")
-print("Training data loaded...")
-# %% Setup Transformer model 
+
+from msd_transformer_tf import TransformerModel
+from scheduler import LRScheduler
+
+def loss_fcn(target, prediction):
+    return  tf.keras.losses.mean_squared_error(target, prediction)
+
+
+# %% TranSetupSetupsformer model parameters
 # as in Attention is all you need
-
 h = 8  # Number of self-attention heads
 d_ff = 2048  # Dimensionality of the inner fully connected layer
 d_model = 512  # Dimensionality of the model sub-layers' outputs
@@ -31,63 +32,37 @@ input_seq = u_train
 #input_seq = random.random((batch_size, input_seq_length))
 print(f"Input dimension: {input_seq.shape}")
 
-# %% Show Parameters
+# training parameters
+epochs = 2
+batch_size = 64
+beta_1 = 0.9
+beta_2 = 0.98
+epsilon = 1e-9
+dropout_rate = 0.1
 
-# %%
-training_model = TransformerModel(encoder_seq_length, decoder_seq_length, h, d_model, d_ff, N, dropout_rate)
-
-# zero padding so each input has the length of max_seq, even though the zero padding will not be processed due to the padding mask
-
-# %%
-def loss_fcn(target, prediction):
-    # Create mask so that the zero padding values are not included in the computation of loss
-    padding_mask = math.logical_not(equal(target, 0))
-    padding_mask = cast(padding_mask, float32)
-
-    # Compute a sparse categorical cross-entropy loss on the unmasked values
-    loss = sparse_categorical_crossentropy(target, prediction, from_logits=True) * padding_mask
-
-    # Compute the mean loss over the unmasked values
-    return reduce_sum(loss) / reduce_sum(padding_mask)
-
-def accuracy_fcn(target, prediction):
-    # Create mask so that the zero padding values are not included in the computation of accuracy
-    padding_mask = math.logical_not(math.equal(target, 0))
-
-    # Find equal prediction and target values, and apply the padding mask
-    accuracy = equal(target, argmax(prediction, axis=2))
-    accuracy = math.logical_and(padding_mask, accuracy)
-
-    # Cast the True/False values to 32-bit-precision floating-point numbers
-    padding_mask = cast(padding_mask, float32)
-    accuracy = cast(accuracy, float32)
-
-    # Compute the mean accuracy over the unmasked values
-    return reduce_sum(accuracy) / reduce_sum(padding_mask)
-
-class LRScheduler(LearningRateSchedule):
-    def __init__(self, d_model, warmup_steps=4000, **kwargs):
-        super(LRScheduler, self).__init__(**kwargs)
-
-        self.d_model = cast(d_model, float32)
-        self.warmup_steps = warmup_steps
-
-    def __call__(self, step_num):
-
-        # Linearly increasing the learning rate for the first warmup_steps, and decreasing it thereafter
-        arg1 = step_num ** -0.5
-        arg2 = step_num * (self.warmup_steps ** -1.5)
-
-        return (self.d_model ** -0.5) * math.minimum(arg1, arg2)
-    
+# Instantziate optimizer
 optimizer = Adam(LRScheduler(d_model), beta_1, beta_2, epsilon)
 
-train_dataset = data.Dataset.from_tensor_slices((trainX, trainY))
+# create model
+training_model = TransformerModel(encoder_seq_length, decoder_seq_length, h, d_model, d_ff, N, dropout_rate)
+
+train_dataset = tf.data.Dataset.from_tensor_slices((trainX, trainY))
 train_dataset = train_dataset.batch(batch_size)
 
+
+# Include metrics monitoring
+train_loss = tf.keras.metrics.Mean(name='train_loss')
+train_accuracy = tf.keras.metrics.Mean(name='train_accuracy')
+
+
+# Create a checkpoint object and manager to manage multiple checkpoints
+ckpt = train.Checkpoint(model=training_model, optimizer=optimizer)
+ckpt_manager = train.CheckpointManager(ckpt, "./checkpoints", max_to_keep=3)
+
+# Speeding up the training process
 @function
 def train_step(encoder_input, decoder_input, decoder_output):
-    with GradientTape() as tape:
+    with tf.GradientTape() as tape:
 
         # Run the forward pass of the model to generate a prediction
         prediction = training_model(encoder_input, decoder_input, training=True)
@@ -96,7 +71,7 @@ def train_step(encoder_input, decoder_input, decoder_output):
         loss = loss_fcn(decoder_output, prediction)
 
         # Compute the training accuracy
-        accuracy = accuracy_fcn(decoder_output, prediction)
+        #accuracy = accuracy_fcn(decoder_output, prediction)
 
     # Retrieve gradients of the trainable variables with respect to the training loss
     gradients = tape.gradient(loss, training_model.trainable_weights)
@@ -105,14 +80,8 @@ def train_step(encoder_input, decoder_input, decoder_output):
     optimizer.apply_gradients(zip(gradients, training_model.trainable_weights))
 
     train_loss(loss)
-    train_accuracy(accuracy)
+    #train_accuracy(accuracy)
 
-train_loss = Mean(name='train_loss')
-train_accuracy = Mean(name='train_accuracy')
-
-# Create a checkpoint object and manager to manage multiple checkpoints
-ckpt = train.Checkpoint(model=training_model, optimizer=optimizer)
-ckpt_manager = train.CheckpointManager(ckpt, "./checkpoints", max_to_keep=3)
 
 for epoch in range(epochs):
 
@@ -120,6 +89,8 @@ for epoch in range(epochs):
     train_accuracy.reset_states()
 
     print("\nStart of epoch %d" % (epoch + 1))
+
+    start_time = time()
 
     # Iterate over the dataset batches
     for step, (train_batchX, train_batchY) in enumerate(train_dataset):
@@ -133,9 +104,10 @@ for epoch in range(epochs):
 
         if step % 50 == 0:
             print(f'Epoch {epoch + 1} Step {step} Loss {train_loss.result():.4f} Accuracy {train_accuracy.result():.4f}')
-           
+            # print("Samples so far: %s" % ((step + 1) * batch_size))
+
     # Print epoch number and loss value at the end of every epoch
-    print("Epoch %d: Training Loss %.4f, Training Accuracy %.4f" % (epoch + 1, train_loss.result(), train_accuracy.result()))
+    print("Epoch %d: Training Loss %.4f" % (epoch + 1, train_loss.result()))#, Training Accuracy %.4f" % (epoch + 1, train_loss.result(), train_accuracy.result()))
 
     # Save a checkpoint after every five epochs
     if (epoch + 1) % 5 == 0:
