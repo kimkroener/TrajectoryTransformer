@@ -66,15 +66,12 @@ class TransformerModel(Model):
     def __init__(self, encoder_seq_len, decoder_seq_len, h, d_model, d_ff, N, dropout_rate, **kwargs):
         super(TransformerModel, self).__init__(**kwargs)
 
-        # Set up the encoder
         self.encoder = Encoder(encoder_seq_len, d_model, d_ff, h, N, dropout_rate, **kwargs)
         self.encoder.encoder_layer.build_graph().summary()
 
-        # Set up the decoder
         self.decoder = Decoder(decoder_seq_len, d_model, d_ff, h, N, dropout_rate, **kwargs)
         self.decoder.encoder_layer.build_graph().summary()
 
-        # Define the final dense layer
         self.model_last_layer = Dense(decoder_seq_len)
 
     def padding_mask(self, input):

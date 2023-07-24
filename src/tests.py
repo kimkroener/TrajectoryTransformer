@@ -1,5 +1,9 @@
 # %%
-from msd_transformer_tf import Encoder, Decoder, PositionalEncoding, MultiHeadAttention, padding_mask
+from encoder import Encoder
+from decoder import Decoder
+from transformer_modules import PositionalEncoding, MultiHeadAttention
+from scheduler import LRScheduler
+
 import matplotlib.pyplot as plt
 import numpy.random as random
 import numpy as np
@@ -65,13 +69,36 @@ def test_encoder():
     print(encoder(input_seq, None, True))
 
 
-def test_masking():
-    input = np.array([0, 1, 2, 3, 1, 0, 0, 0])
-    print(padding_mask(input))
+# def test_masking():
+#     input = np.array([0, 1, 2, 3, 1, 0, 0, 0])
+#     print(padding_mask(input))
     
 # %%
-#test_pe()
-# test_attention()
+def test_lrscheduler():
+    lr_scheduler = LRScheduler(d_model=64, warmup_steps=4000)
+
+    n_points = 1000
+    steps = np.linspace(0, 80000, n_points)
+    lr_rate = np.empty(n_points, dtype=np.float32)
+
+    for i in np.arange(n_points):
+        lr_rate[i] = lr_scheduler(steps[i])
+
+    plt.figure()
+    #plt.xlabel = "sequence position; timesteps"
+    #plt.ylabel = "model dimension"
+    plt.title("Learning rate")
+    plt.plot(steps, lr_rate)
+    plt.savefig("../tests/lr_rate.svg")
+    plt.show()
+    print("LR Rate plot generated.")
+
+    
+
+
+# %%
+test_pe()
+#test_attention()
 #test_encoder()
-test_masking()
+test_lrscheduler()
 # %%
