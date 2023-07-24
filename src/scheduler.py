@@ -16,5 +16,4 @@ class LRScheduler(LearningRateSchedule):
         arg2 = step_num * (self.warmup_steps ** -1.5)
 
         return 1./tf.math.sqrt(self.d_model) * tf.math.minimum(arg1, arg2)
-#        return (self.d_model ** -0.5) * tf.math.minimum(arg1, arg2)
     

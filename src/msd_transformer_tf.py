@@ -67,10 +67,10 @@ class TransformerModel(Model):
         super(TransformerModel, self).__init__(**kwargs)
 
         self.encoder = Encoder(encoder_seq_len, d_model, d_ff, h, N, dropout_rate, **kwargs)
-        self.encoder.encoder_layer.build_graph().summary()
+        # self.encoder.encoder_layer.build_graph().summary()
 
         self.decoder = Decoder(decoder_seq_len, d_model, d_ff, h, N, dropout_rate, **kwargs)
-        self.decoder.encoder_layer.build_graph().summary()
+        # self.decoder.encoder_layer.build_graph().summary()
 
         self.model_last_layer = Dense(decoder_seq_len)
 
