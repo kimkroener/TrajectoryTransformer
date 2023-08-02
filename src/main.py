@@ -3,8 +3,11 @@ import numpy as np
 from numpy import random
 import matplotlib.pyplot as plt
 from time import time
+from pickle import load
+
 
 import tensorflow as tf 
+from tensorflow import Module, convert_to_tensor, TensorArray, argmax, newaxis, transpose
 from tensorflow.keras.optimizers import Adam
 
 from msd_transformer_tf import TransformerModel
@@ -42,4 +45,8 @@ optimizer = Adam(LRScheduler(d_model), beta_1, beta_2, epsilon)
 
 model.compile(optimizer=optimizer, loss="mse", metrics=["mae"])
 
-# %%
+# %% Inference
+decoder_output = tf.TensorArray(dtype=float, size=decoder_seq_length)
+
+for i in range(decoder_seq_length):
+    prediction = 

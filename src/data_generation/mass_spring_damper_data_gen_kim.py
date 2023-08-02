@@ -5,7 +5,7 @@ from scipy import linalg
 from scipy import signal
 from sklearn.model_selection import train_test_split
 from scipy.stats import qmc
-import pandas as pd
+
 # set up matplotlib
 plt.rcParams.update({
     "text.usetex": False,
@@ -117,7 +117,8 @@ stiff_vals = 4
 input_vals = 0 # None (autonomous) | 0 (first mass excitation - SISO)
 use_single_input_traj = False
 # input functions
-u_mult = lambda t, amp, omega: np.exp(-t/2)*amp*np.sin(omega*t**2) # in publication [MorandinNicodemusUnger22]
+def u_mult(t, amp, omega):
+    return np.exp(-t/2)*amp*np.sin(omega*t**2) # in publication [MorandinNicodemusUnger22]
 t = np.linspace(0, 10, 500) # time vector
 
 # %% input functions
@@ -132,7 +133,7 @@ omega_max = 2
 amp = amp_min + lhs_values[:,0]*(amp_max-amp_min)
 omega = omega_min + lhs_values[:,1]*(omega_max-omega_min)
 # create input functions
-u = [u_mult(t, amp_, omega_) for amp_, omega_ in zip(amp,omega)]
+u = [u_mult(t, amp_, omega_) for amp_, omega_ in zip(amp,omega)]  # noqa: B905
 
 plt.figure()
 for u_ in u:
@@ -171,7 +172,7 @@ plt.title('position x(t)')
 plt.show(block=False)
 
 # %% export generated data
-np.save("../data/SISO_three-masses/x_train",x_train)
-np.save("../data/SISO_three-masses/x_test",x_test)
-np.save("../data/SISO_three-masses/u_train",u_train)
-np.save("../data/SISO_three-masses/u_test",u_test)
+# np.save("../data/SISO_three-masses/x_train",x_train)
+# np.save("../data/SISO_three-masses/x_test",x_test)
+# np.save("../data/SISO_three-masses/u_train",u_train)
+# np.save("../data/SISO_three-masses/u_test",u_test)

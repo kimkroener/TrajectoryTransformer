@@ -2,7 +2,7 @@
 Tensorflow Implementation for the transformer modules
     - Add and Norm
     - Multihead Attention
-    - Feed-Forward Dense NN 
+    - Feed-Forward Dense NN
     - Positional Encoding
 """
 
@@ -71,16 +71,16 @@ class PositionalEncoding(Layer):
 
     def call(self, x):
         return x + self.pe[:x.shape[0], :]
-        
 
-     
+
+
 # Multi-Head Attention Module
 class ScaledDotProductAttention(Layer):
     """Compute the scaled dot product attention
 
     Args:
         queries:
-        keys: 
+        keys:
         values
         d_k: dimensionality of queries/keys
     """
@@ -88,7 +88,7 @@ class ScaledDotProductAttention(Layer):
         super(ScaledDotProductAttention, self).__init__(**kwargs)
 
     def call(self, queries, keys, values, d_k, mask=None):
-        
+
         scores = tf.matmul(queries, keys, transpose_b=True) / tf.math.sqrt(tf.cast(d_k, tf.float32))
 
         # Apply mask to the attention scores
@@ -114,9 +114,9 @@ class MultiHeadAttention(Layer):
         assert d_model % h == 0 # infere d_k, d_v from model params
 
         self.attention = ScaledDotProductAttention()
-        self.heads = h  # num attention heads 
+        self.heads = h  # num attention heads
         self.d_model = d_model  # model dimensionality
-    
+
         # projection matrices - queries, keys, values, output
         self.d_k = d_model // h
         self.d_v = d_model // h
@@ -147,6 +147,6 @@ class MultiHeadAttention(Layer):
 
         # Concat output
         output = self.split_heads(o_split, self.heads, False) # (batch_size, input_seq_length, d_v)
-        
+
         # final linear projection
         return self.W_o(output)

@@ -1,6 +1,6 @@
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras import Model
+# import numpy as np
+# import tensorflow as tf
+# from tensorflow.keras import Model
 from tensorflow.keras.layers import Layer, Dropout, Input, Dense
 from transformer_modules import MultiHeadAttention, AddNormalization, FeedForward, PositionalEncoding
 
@@ -50,10 +50,10 @@ class Encoder(Layer):
         self.embedding = Dense(d_model)
         self.pos_encoding = PositionalEncoding(sequence_length, d_model)
         self.dropout = Dropout(dropout)
-        self.encoder_layer = [EncoderLayer(sequence_length, d_model, d_ff, dropout, h) for _ in range(N)]  # noqa: E501
+        self.encoder_layer = [EncoderLayer(sequence_length, d_model, d_ff, dropout, h) for _ in range(N)]
 
     def call(self, input_sequence, padding_mask, training):
-        # input embedding 
+        # input embedding
         embedded_input = self.embedding(input_sequence)
 
         # positional encoding with dropout
