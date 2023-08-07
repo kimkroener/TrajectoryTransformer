@@ -1,8 +1,8 @@
 # %%
 from encoder import Encoder
-from decoder import Decoder
-from transformer_modules import PositionalEncoding, MultiHeadAttention
-from scheduler import LRScheduler
+from lib.decoder import Decoder
+from lib.transformer_modules import PositionalEncoding, MultiHeadAttention
+from lib.scheduler import LRScheduler
 
 import matplotlib.pyplot as plt
 import numpy.random as random
@@ -17,6 +17,7 @@ def test_pe():
     n_T = 50 # timesteps
     d_model = 128 # model complexity
     PE = PositionalEncoding(seq_len=n_T, d_model=d_model)
+    print(f"PE shape: {PE.pe.shape}")
     plt.figure()
     #plt.xlabel = "sequence position; timesteps"
     #plt.ylabel = "model dimension"
@@ -100,5 +101,5 @@ def test_lrscheduler():
 test_pe()
 #test_attention()
 #test_encoder()
-test_lrscheduler()
+#test_lrscheduler()
 # %%
