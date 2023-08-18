@@ -18,9 +18,10 @@ def load_data(dataset_dir: str):
     if len(x.shape) == 2:
         x = x[:, :, tf.newaxis]
 
-    print(f"Loaded data from {dataset_dir}")
 
-    return u, x
+    # DEBUGGING - use all timesteps!!
+    print("\nOnly using first 10 timesteps for debugging\n")
+    return u[:, :10, :], x[:, :10, :1]
 
 
 def split_data(X, Y, ratio):
