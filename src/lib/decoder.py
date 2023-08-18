@@ -49,8 +49,10 @@ class Decoder(Layer):
         pos_encoding_output = self.pos_encoding(embedded_target)
         x = self.dropout(pos_encoding_output, training=training)
 
-        for _, layer in enumerate(self.decoder_layer):
+        print("Decoder layer ", end="")
+        for i, layer in enumerate(self.decoder_layer):
+            print(f"{i}..", end="")
             x = layer(x, encoder_output, lookahead_mask, padding_mask, training)
-
+        print("")
         return x
     

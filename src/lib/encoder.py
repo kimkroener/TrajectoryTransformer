@@ -58,7 +58,10 @@ class Encoder(Layer):
         # Expected shape = (batch_size, sequence_length, d_model)
 
         # Iterate over N encoder layers
-        for _, layer in enumerate(self.encoder_layer):
+        print("Encoder layer ", end="")
+        for i, layer in enumerate(self.encoder_layer):
+            print(f"{i}..", end="")
             x = layer(x, padding_mask, training)
 
+        print("")
         return x

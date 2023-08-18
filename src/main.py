@@ -20,7 +20,9 @@ log_dir = "../logs/"
 checkpoint_dir = "../checkpoints/"
 data_path_weights_filename = os.path.join(checkpoint_dir, "model_weights")
 
-#tf.debugging.experimental.enable_dump_debug_info(log_dir, tensor_debug_mode="FULL_HEALTH", circular_buffer_size=-1)
+tf.debugging.experimental.enable_dump_debug_info(log_dir, tensor_debug_mode="FULL_HEALTH", circular_buffer_size=-1)
+tf.config.run_functions_eagerly(True)
+tf.data.experimental.enable_debug_mode()
 
 # create if they don't exist
 os.makedirs(data_dir, exist_ok=True)
@@ -42,8 +44,6 @@ print(f"Encoder input shape: {x_train.shape}")
 print(f"Decoder input and output shape: {y_train.shape}")
 print("Shapes are in order (N_sim, N_timesteps, N_dof) and (N_batch, N_timesteps, d_model) internally.\n")
 
-tf.config.run_functions_eagerly(True)
-tf.data.experimental.enable_debug_mode()
 # Create and compile model
 
 # Transformer architecture params
@@ -102,8 +102,7 @@ history = model.fit(x=(x_train, y_train_shifted),
                     y=y_train,
                     epochs=epochs,
                     batch_size=batch_size,
-                    #callbacks=callbacks,
-                    # validation_spilit=0.2
+                    callbacks=callbacks,
                     )
 
 print(history.history)
