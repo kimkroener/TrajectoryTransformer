@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
-
+import yaml
 # %%
 def load_data(dataset_dir: str):
     """Load train and test data of mass-spring-damper system
@@ -60,21 +60,8 @@ def shift(X):
     shifted_input = X[:, :-1, :]
     return tf.concat([start, shifted_input], axis=1)
 
-
-# def compute_batches(N_seq, encoder_seq_length, batch_size):
-#     num_batches = N_seq // batch_size
-
-#     batch_size_tensor = []
-#     for _ in range(num_batches):
-#         batch_size_tensor.append(batch_size)
-
-#     # Handle the last batch, which might have a different size if N is not divisible by the batch size
-#     if N_seq % batch_size != 0:
-#         batch_size_tensor.append(N_seq % batch_size)
-
-#     # Convert the list to a tensor
-#     batch_size_tensor = np.array(batch_size_tensor)
-#     return batch_size_tensor
-
-
-# %%
+def load_config(file_path):
+    with open(file_path, "r") as yaml_file:
+        config = yaml.safe_load(yaml_file)
+    return config
+    

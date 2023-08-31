@@ -1,0 +1,20 @@
+data:
+  data_dir: "../data/SISO_three-masses/"
+  logs_dir: "../logs/"
+  checkpoints_dir: "../checkpoints/"
+  train_test_ratio: [0.03, 0.97] # Total data points 100
+
+architecture:
+  d_model: 8
+  N_stacks: 6
+  h: 2
+  d_ff: 23
+  dropout_rate: 0.1
+
+training:
+  # optimizer
+  beta_1: 0.9
+  beta_2: 0.98
+  epsilon: 1e-9
+  epochs: 20
+  batch_size: 64
