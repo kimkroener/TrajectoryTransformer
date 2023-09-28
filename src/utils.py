@@ -1,7 +1,12 @@
+import os
+import pickle
+
 import numpy as np
 import tensorflow as tf
-from sklearn.model_selection import train_test_split
 import yaml
+from sklearn.model_selection import train_test_split
+
+
 # %%
 def load_data(dataset_dir: str):
     """Load train and test data of mass-spring-damper system
@@ -18,10 +23,9 @@ def load_data(dataset_dir: str):
     if len(x.shape) == 2:
         x = x[:, :, tf.newaxis]
 
-
     # DEBUGGING - use all timesteps!!
-    print("\nOnly using first 10 timesteps for debugging\n")
-    return u[:, :10, :], x[:, :10, :1]
+    print("\nOnly using first 5 timesteps and one dof for debugging\n")
+    return u[:, :5, :1], x[:, :5, :1]
 
 
 def split_data(X, Y, ratio):
@@ -49,19 +53,17 @@ def split_data(X, Y, ratio):
         return x_train, x_test, x_val, y_train, y_test, y_val
 
 
-
-
 def shift(X):
     """shift input of the decoder
     here: shift each time series by one timestep and append a np.inf at the beginning as a mark for the padding mask
     """
-    N, T, dof = X.shape
-    start = tf.ones((N, 1, dof))*np.inf
+    N, T, d_input = X.shape
+    start = tf.zeros((N, 1, d_input))
     shifted_input = X[:, :-1, :]
     return tf.concat([start, shifted_input], axis=1)
 
 def load_config(file_path):
+    dir = os.getcwd()
     with open(file_path, "r") as yaml_file:
         config = yaml.safe_load(yaml_file)
     return config
-    

@@ -1,5 +1,5 @@
 # %%
-from encoder import Encoder
+from lib.encoder import Encoder
 from lib.decoder import Decoder
 from lib.transformer_modules import PositionalEncoding, MultiHeadAttention
 from lib.scheduler import LRScheduler
@@ -11,7 +11,7 @@ import numpy as np
 
 # %%
 """
-Test Positional Encoding
+Visualize Positional Encoding
 """
 def test_pe():
     n_T = 50 # timesteps
@@ -34,8 +34,8 @@ def test_pe():
 Test Multihead-Attention
 """
 def test_attention():
-    h = 5
-    d_model=50
+    h = 1
+    d_model=2
     attn = MultiHeadAttention(h=h, d_model=d_model)
     
     batch_size = 5
@@ -75,6 +75,8 @@ def test_encoder():
 #     print(padding_mask(input))
     
 # %%
+"""Visualize the learning rate
+"""
 def test_lrscheduler():
     lr_scheduler = LRScheduler(d_model=64, warmup_steps=4000)
 
@@ -99,7 +101,7 @@ def test_lrscheduler():
 
 # %%
 test_pe()
-#test_attention()
+test_attention()
 #test_encoder()
 #test_lrscheduler()
 # %%
