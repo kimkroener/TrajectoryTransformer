@@ -1,8 +1,8 @@
 data:
-  data_dir: "data/SISO_three-masses/"
-  logs_dir: "logs/"
-  checkpoints_dir: "checkpoints/"
-  train_test_ratio: [0.01, 0.99] # Total data points 100
+  data_dir: "./data/SISO_three-masses/"
+  logs_dir: "./logs/"
+  checkpoints_dir: "./checkpoints/"
+  train_test_ratio: [0.5, 0.5] # Total data points 100
 
 architecture:
   d_model: 1
@@ -16,3 +16,4 @@ training:
   # optimizer
   epochs: 2 
   batch_size: 64
+  save_dir: "./saved_model/TrajTraf_three-masses/"

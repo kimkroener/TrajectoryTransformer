@@ -3,7 +3,10 @@
 /.vscode
 /src/Miniconda3-latest-Linux-x86_64.sh
 /data/*.npy
-/saved_models/*
+saved_model/
+checkpoints/
+src/data_generation/explore.py
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

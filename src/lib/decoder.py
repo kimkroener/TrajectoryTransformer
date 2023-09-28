@@ -18,25 +18,21 @@ class DecoderLayer(Layer):
     #     return Model(inputs=[input_layer], outputs=self.call(input_layer, None, True))
 
     def call(self, x, encoder_output, training):
-        print(f"Decoder input {x}")
+        #print(f"Decoder input {x}")
         # normed masked self attention with dropout to masked out subsequent positions
         # causal self attention with lookahead mask for autorregressive behaviour
         multihead_output1 = self.multihead_attention(x, x, x)# query=x, key=x, value=x, use_causal_mask=True)  #self.multihead_attention(x, x, x, lookahead_mask)
 
         multihead_output1 = self.dropout(multihead_output1, training=training)
         addnorm_output1 = self.add_norm(x, multihead_output1)
-        print(f"Masked self-attention {addnorm_output1}")
         # encoder-decoder cross attention with dropout
         multihead_output2 = self.multihead_attention(query = addnorm_output1, key=encoder_output, value=encoder_output) # , encoder_output, padding_mask)
         multihead_output2 = self.dropout(multihead_output2, training=training)
         addnorm_output2 = self.add_norm(addnorm_output1, multihead_output2)
-      #  print(f"Encoder-decoder attention {addnorm_output2}")
         # feed forward
         feedforward_output = self.feed_forward(addnorm_output2)
         feedforward_output = self.dropout(feedforward_output, training=training)
         decoder_output = self.add_norm(addnorm_output2, feedforward_output)
-       # print(f"Decoder output {decoder_output}")
-
         return decoder_output
 
 
