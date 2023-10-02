@@ -36,7 +36,7 @@ def load_data(config):
     # Load data and data specific parameters
     # Load data and data specific parameters
     train_test_ratio = config["data"]["train_test_ratio"]
-    X, Y = utils.load_data(data_dir)
+    X, Y = utils.get_spring_mass_damper_data(data_dir)
     x_train, x_test, y_train, y_test = utils.split_data(X, Y, train_test_ratio)
 
     y_train_shifted = utils.shift(y_train) # decoder input

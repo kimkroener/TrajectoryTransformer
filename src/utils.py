@@ -8,7 +8,28 @@ from sklearn.model_selection import train_test_split
 
 
 # %%
-def load_data(dataset_dir: str):
+def get_occupant_data(reduced=True):
+    with open('../../data/occupant_data_transformer.pkl', 'rb') as f:
+        data = pickle.load(f)
+        displacements_train = data['displacements_train']
+        displacements_test = data['displacements_test']
+        displacements_red_train = data['displacements_red_train']
+        displacements_red_test = data['displacements_red_test']
+        params_train = data['params_train']
+        params_test = data['params_test']
+        times_train = data['times_train']
+        times_test = data['times_test']
+        reference_coordinates_train = data['reference_coordinates_train']
+        reference_coordinates_test = data['reference_coordinates_test']
+        projection_matrix = data['projection_matrix']
+
+    if reduced:
+        return displacements_red_train, displacements_red_test
+    else:
+        return displacements_train, displacements_test
+
+
+def get_spring_mass_damper_data(dataset_dir: str):
     """Load train and test data of mass-spring-damper system
 
     Args:
