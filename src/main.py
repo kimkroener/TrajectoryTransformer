@@ -109,7 +109,7 @@ def train_model(config, optimizer):
         )
     
     early_stopping_cb = tf.keras.callbacks.EarlyStopping(
-            monitor='loss',
+            monitor='val_loss',
             patience=3,
             verbose=1,
             restore_best_weights=True
@@ -120,6 +120,7 @@ def train_model(config, optimizer):
     # train model
     history = model.fit(x=[x_train, y_train_shifted],
                         y=y_train,
+                        validation_data=([x_test, y_test_shifted], y_test),
                         epochs=epochs,
                         batch_size=batch_size,
                         callbacks=callbacks,
@@ -133,6 +134,15 @@ def train_model(config, optimizer):
     tf.saved_model.save(model, save_dir)
 
     return model, history
+
+
+def load_checkpoint(config, untrained_model):
+    checkpoint_dir = config["data"]["checkpoints_dir"]
+    
+    model = tf.train.checkpoint.restore(checkpoint_dir)
+
+    return model
+
 
 #----
 

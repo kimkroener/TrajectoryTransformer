@@ -5,6 +5,7 @@ from scipy import linalg
 from scipy import signal
 from sklearn.model_selection import train_test_split
 from scipy.stats import qmc
+import os
 
 # set up matplotlib
 plt.rcParams.update({
@@ -105,8 +106,9 @@ def mass_spring_damper_ode(x,t,A,B,u):
     return dxdt
 
 # %% Script parameters
-n_trajectories = 100
+n_trajectories = 500
 train_test_split_ratio = 0.5
+save_dir = "../../data/SMD-three-masses/"
 
 # %% Model parameters
 # values from [MorandinNicodemusUnger22]
@@ -172,11 +174,8 @@ plt.title('position x(t)')
 plt.show(block=False)
 
 # %% export generated data
-# np.save("../../data/SISO_three-masses/x_train",x_train)
-# np.save("../../data/SISO_three-masses/x_test",x_test)
-# np.save("../../data/SISO_three-masses/u_train",u_train)
-# np.save("../../data/SISO_three-masses/u_test",u_test)
-np.save("../../data/SISO_three-masses/u",u)
-np.save("../../data/SISO_three-masses/x",x)
+os.makedirs(save_dir, exist_ok=True)
+np.save(os.path.join(save_dir, "u"),u)
+np.save(os.path.join(save_dir, "x"),x)
 
 # %%

@@ -2,7 +2,7 @@
 /logs
 /.vscode
 /src/Miniconda3-latest-Linux-x86_64.sh
-/data/*.npy
+data/*.npy
 saved_model/
 checkpoints/
 src/data_generation/explore.py
