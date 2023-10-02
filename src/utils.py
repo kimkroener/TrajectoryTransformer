@@ -24,8 +24,8 @@ def load_data(dataset_dir: str):
         x = x[:, :, tf.newaxis]
 
     # DEBUGGING - use all timesteps!!
-    print("\nOnly using first 5 timesteps and one dof for debugging\n")
-    return u[:, :5, :1], x[:, :5, :1]
+    #print("\nOnly using first 5 timesteps and one dof for debugging\n")
+    return u[:, :, :], x[:, :, :]
 
 
 def split_data(X, Y, ratio):

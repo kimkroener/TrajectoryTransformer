@@ -8,7 +8,7 @@ class DecoderLayer(Layer):
         # self.build(input_shape=[None, seq_len, d_model])
         self.d_model = d_model
         self.seq_len = seq_len
-        self.multihead_attention = tf.keras.layers.MultiHeadAttention(num_heads=h, key_dim=2,**kwargs) #  = MultiHeadAttention(h, d_model)
+        self.multihead_attention = tf.keras.layers.MultiHeadAttention(num_heads=h, key_dim=2, **kwargs) #  = MultiHeadAttention(h, d_model)
         self.dropout = Dropout(dropout)
         self.add_norm = AddNormalization()
         self.feed_forward = FeedForward(d_ff, d_model, activation_ff)
@@ -49,10 +49,10 @@ class Decoder(Layer):
         pos_encoding_output = self.pos_encoding(embedded_target)
         x = self.dropout(pos_encoding_output, training=training)
 
-        print("Decoder layer ", end="")
+        #print("Decoder layer ", end="")
         for i, layer in enumerate(self.decoder_layer):
-            print(f"{i}..", end="")
+        #    print(f"{i}..", end="")
             x = layer(x, encoder_output, training)
-        print("")
+        #print("")
         return x
 

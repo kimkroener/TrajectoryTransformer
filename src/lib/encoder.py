@@ -61,10 +61,10 @@ class Encoder(Layer):
         x = self.dropout(pos_encoding_output, training=training)
 
         # Iterate over n_stack encoder layers
-        print("Encoder layer ", end="")
+        #print("Encoder layer ", end="")
         for i, layer in enumerate(self.encoder_layer):
-            print(f"{i}..", end="")
+        #    print(f"{i}..", end="")
             x = layer(x, padding_mask, training)
 
-        print("")
+        #print("")
         return x

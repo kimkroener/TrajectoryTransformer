@@ -13,11 +13,11 @@ config = utils.load_config(config_file)
 
 # %%
 
-def setup_logs(config):
+def setup_tf(config):
     # Set paths for data, logs, checkpoints
     log_dir = config["data"]["logs_dir"]
     
-    tf.debugging.experimental.enable_dump_debug_info(log_dir, tensor_debug_mode="FULL_HEALTH", circular_buffer_size=-1)
+    #tf.debugging.experimental.enable_dump_debug_info(log_dir, tensor_debug_mode="FULL_HEALTH", circular_buffer_size=-1)
     tf.config.run_functions_eagerly(True)
     tf.data.experimental.enable_debug_mode()
 
@@ -57,7 +57,7 @@ def load_data(config):
     return x_train, y_train_shifted, y_train, x_test, y_test_shifted, y_test
 
 
-def compile_model(config, encoder_seq_length, decoder_seq_length, d_output):
+def build_model(config, encoder_seq_length, decoder_seq_length, d_output):
     # Transformer architecture params
     d_model = config["architecture"]["d_model"]  # Dimensionality of the latent space
     n_stacks = config["architecture"]["N_stacks"]  # Depth of encoder and decoder layers
@@ -87,33 +87,35 @@ def train_model(config, optimizer):
     epochs = config["training"]["epochs"]
     batch_size = config["training"]["batch_size"]  
     
-    # setup checkpointing
+   
+    # setup callbacks - tensorboard, checkpoints, early stopping
+    tensorboard_cb = tf.keras.callbacks.TensorBoard(
+        log_dir=log_dir,
+        histogram_freq=1
+    )
+
     checkpoint_dir = config["data"]["checkpoints_dir"]
     os.makedirs(checkpoint_dir, exist_ok=True)
-
+    data_path_weights_filename = os.path.join(checkpoint_dir, "model_weights")
     ckpt = tf.train.Checkpoint(model=model, optimizer=optimizer)
     manager = tf.train.CheckpointManager(ckpt, checkpoint_dir, max_to_keep=3)
 
-    # setup tensorboard logging and checkpointing
-    data_path_weights_filename = os.path.join(checkpoint_dir, "model_weights")
-    callbacks = [
-        tf.keras.callbacks.ModelCheckpoint(
+    model_ckpt_cb = tf.keras.callbacks.ModelCheckpoint(
             data_path_weights_filename,
             monitor='loss',
             save_best_only=True,
             save_weights_only=True,
-        ),
-        tf.keras.callbacks.TensorBoard(
-            log_dir=log_dir,
-            histogram_freq=1
-        ),
-        tf.keras.callbacks.EarlyStopping(
+            verbose=1,
+        )
+    
+    early_stopping_cb = tf.keras.callbacks.EarlyStopping(
             monitor='loss',
             patience=3,
             verbose=1,
             restore_best_weights=True
         )
-        ]
+
+    callbacks = [model_ckpt_cb, tensorboard_cb, early_stopping_cb]
 
     # train model
     history = model.fit(x=[x_train, y_train_shifted],
@@ -126,28 +128,25 @@ def train_model(config, optimizer):
     print(history.history)
 
     # save model
-    #
-   # model.save(os.path.join(checkpoint_dir, "trajTrafo.h5"))
-    
     save_dir = config["training"]["save_dir"]
-    os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(save_dir, exist_ok=True)
     tf.saved_model.save(model, save_dir)
 
     return model, history
 
+#----
 
-
-log_dir = setup_logs(config)
+log_dir = setup_tf(config)
 x_train, y_train_shifted, y_train, x_test, y_test_shifted, y_test = load_data(config)
 
 n_seq, encoder_seq_length, d_input = x_train.shape
 n_seq, decoder_seq_length, d_output = y_train.shape
 
-model, optimizer = compile_model(config, encoder_seq_length, decoder_seq_length, d_output)
+model, optimizer = build_model(config, encoder_seq_length, decoder_seq_length, d_output)
 
 model, history = train_model(config, optimizer)
 
-
+# ----
 
 # metrics monitoring
 #train_loss = tf.keras.metrics.Mean(name='train_loss')

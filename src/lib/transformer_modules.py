@@ -45,7 +45,7 @@ class FeedForward(Layer):
 
 # Add & Norm Layer
 class AddNormalization(Layer):
-    """Add input and output of a sublayer and apply layer normalization
+    """Residual connections around a sublayer and apply layer normalization
 
     """
     def __init__(self, **kwargs):

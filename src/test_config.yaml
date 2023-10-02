@@ -14,6 +14,6 @@ architecture:
 
 training:
   # optimizer
-  epochs: 2 
-  batch_size: 64
+  epochs: 10 # can be increased early stopping is used
+  batch_size: 64 # adapt to GPU memory
   save_dir: "./saved_model/TrajTraf_three-masses/"

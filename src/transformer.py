@@ -69,7 +69,7 @@ class Transformer(Model):
         decoder_output = self.decoder(decoder_input, encoder_output, training)
         model_output = self.model_last_layer(decoder_output)
 
-        print(f"Final layer: {decoder_output.shape} to {model_output.shape}")
+        #print(f"Final layer: {decoder_output.shape} to {model_output.shape}")
         return model_output
 
     # @tf.function

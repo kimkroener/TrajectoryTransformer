@@ -10,9 +10,9 @@ class LRScheduler(LearningRateSchedule):
 
     def __call__(self, step_num):
 
-        # Linearly increasing the learning rate for the first warmup_steps, and decreasing it thereafter
+        # Linearly increasing the learning rate for the first warmup_steps then decrease
         step_num = tf.cast(step_num, dtype=tf.float32)
-        arg1 = step_num ** -0.5
+        arg1 = tf.math.rsqrt(step_num)
         arg2 = step_num * (self.warmup_steps ** -1.5)
 
         return 1./tf.math.sqrt(self.d_model) * tf.math.minimum(arg1, arg2)
