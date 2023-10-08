@@ -6,6 +6,11 @@ import tensorflow as tf
 import yaml
 from sklearn.model_selection import train_test_split
 
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+from transformer import Transformer
+from lib.scheduler import LRScheduler
 
 # %%
 def get_occupant_data(reduced=True):
@@ -90,6 +95,66 @@ def load_config(file_path):
     return config
 
 
+
+def load_data(config):
+    data_dir = config["data"]["data_dir"]
+    if not os.path.exists(data_dir):
+        raise FileNotFoundError(f"Data directory {data_dir} does not exist.")
+
+    # Load data and data specific parameters
+    train_test_val_ratio = config["data"]["train_test_ratio"]
+    X, Y = get_spring_mass_damper_data(data_dir)
+    x_train, x_test, x_val, y_train, y_test, y_val = split_data(X, Y, train_test_val_ratio)
+
+    y_train_shifted = shift(y_train) # decoder input
+    y_test_shifted = shift(y_test)
+    y_val_shifted = shift(y_val)
+
+    # ensure returned values are TF tensors
+    x_train = tf.convert_to_tensor(x_train, dtype=tf.float32)
+    y_train = tf.convert_to_tensor(y_train, dtype=tf.float32)
+    x_test = tf.convert_to_tensor(x_test, dtype=tf.float32)
+    y_test = tf.convert_to_tensor(y_test, dtype=tf.float32)
+    x_val = tf.convert_to_tensor(x_val, dtype=tf.float32)
+    y_val = tf.convert_to_tensor(y_val, dtype=tf.float32)
+
+    # print info to console
+    print(f"\nLoaded data from {data_dir}")
+    print(f"Encoder input shape: {x_train.shape}")
+    print(f"Decoder input and output shape: {y_train.shape}")
+    print("Shapes are in order (N_sim, N_timesteps, N_dof) and (N_batch, N_timesteps, d_model) internally.\n")
+
+    return x_train, y_train_shifted, y_train, x_test, y_test_shifted, y_test, x_val, y_val_shifted, y_val
+
+
+
+def build_transformer(config, encoder_seq_length, decoder_seq_length, d_output):
+    # Transformer architecture params
+    d_model = config["architecture"]["d_model"]  # Dimensionality of the latent space
+    n_stacks = config["architecture"]["N_stacks"]  # Depth of encoder and decoder layers
+    n_heads = config["architecture"]["h"]  # Number of self-attention heads
+    d_ff = config["architecture"]["d_ff"]  # Dimensionality of the inner fully connected layer
+    activation_ff = config["architecture"]["activation_ff"]  # Activation function of the feed-forward module
+    dropout_rate = config["architecture"]["dropout_rate"]  # Frequency of dropping the input units in the dropout layers
+
+    # create model
+    model = Transformer(encoder_seq_length, decoder_seq_length, n_heads, d_model, d_ff, activation_ff, d_output, n_stacks, dropout_rate)
+
+    # setup optimizer
+    # for beta and eps use default values as no hyperparameter tuning was done
+    optimizer = tf.keras.optimizers.Adam(LRScheduler(d_model)) # , beta_1, beta_2, epsilon)
+
+    model.compile(optimizer=optimizer,
+                loss="mse",
+                metrics=["mse"],
+                )
+
+    print("Model compield.")
+
+    return model, optimizer
+
+
+
 def print_timedelta(start_time, end_time):
     """print elapsed time in format HH:MM:SS
 
@@ -124,4 +189,32 @@ def plot_train_and_val_loss(history, model_dir):
     plt.show()
 
     
-    
+def plot_train_val_loss_plotly(history: dict, model_dir: str):
+    """plot training and validation loss with plotly
+
+    Args:
+        history (dict): history dict from model.fit() (history.history)
+        model_dir (str): path to model directory to save plot
+    """
+    # Create figure with secondary y-axis
+    fig = make_subplots(specs=[[{"secondary_y": False}]])
+
+    # Add traces
+    fig.add_trace(
+        go.Scatter( y=history['val_loss'], name="val_loss"),
+        secondary_y=False,
+    )
+    fig.add_trace(
+        go.Scatter( y=history['loss'], name="loss"),
+        secondary_y=False,
+    )
+    # Add figure title
+    fig.update_layout(
+        title_text="Loss of Transformer Model during Training"
+    )
+
+    # Set x-axis title
+    fig.update_xaxes(title_text="Epoch")
+    fig.update_yaxes(title_text="Loss (MSE)", secondary_y=False)
+
+    fig.show()

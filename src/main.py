@@ -16,7 +16,8 @@ config_file = "test_config.yaml"
 # %%
 
 def setup_tf(config_file: str):
-    config = utils.load_config(os.path.join("src/config_files", config_file))
+    config_file = os.path.join("src/config_files", config_file)
+    config = utils.load_config(config_file)
 
     # create a unique directory for the model
     model_name = config["model_name"]
@@ -26,7 +27,7 @@ def setup_tf(config_file: str):
     os.makedirs(model_dir, exist_ok=True)
 
     # copy config file for documentation
-    shutil.copy(config_file, model_dir)
+    shutil.copy(config_file, f"{model_dir}/config.yaml")
 
     # set paths for tf logs
     log_dir_name = config["data"]["logs_dir_name"]
@@ -72,32 +73,6 @@ def load_data(config):
     return x_train, y_train_shifted, y_train, x_test, y_test_shifted, y_test, x_val, y_val_shifted, y_val
 
 
-def build_transformer(config, encoder_seq_length, decoder_seq_length, d_output):
-    # Transformer architecture params
-    d_model = config["architecture"]["d_model"]  # Dimensionality of the latent space
-    n_stacks = config["architecture"]["N_stacks"]  # Depth of encoder and decoder layers
-    n_heads = config["architecture"]["h"]  # Number of self-attention heads
-    d_ff = config["architecture"]["d_ff"]  # Dimensionality of the inner fully connected layer
-    activation_ff = config["architecture"]["activation_ff"]  # Activation function of the feed-forward module
-    dropout_rate = config["architecture"]["dropout_rate"]  # Frequency of dropping the input units in the dropout layers
-
-    # create model
-    model = Transformer(encoder_seq_length, decoder_seq_length, n_heads, d_model, d_ff, activation_ff, d_output, n_stacks, dropout_rate)
-
-    # setup optimizer
-    # for beta and eps use default values as no hyperparameter tuning was done
-    optimizer = Adam(LRScheduler(d_model)) # , beta_1, beta_2, epsilon)
-
-    model.compile(optimizer=optimizer,
-                loss="mse",
-                metrics=["mse"],
-                )
-
-    print("Compiled model, can start training...")
-
-    return model, optimizer
-
-
 def train_model(config, optimizer, model_dir):
     epochs = config["training"]["epochs"]
     batch_size = config["training"]["batch_size"]
@@ -114,7 +89,7 @@ def train_model(config, optimizer, model_dir):
     )
 
     ckpt = tf.train.Checkpoint(model=model, optimizer=optimizer)
-    manager = tf.train.CheckpointManager(ckpt, checkpoint_dir, max_to_keep=3)
+    #manager = tf.train.CheckpointManager(ckpt, checkpoint_dir, max_to_keep=3)
 
     model_ckpt_cb = tf.keras.callbacks.ModelCheckpoint(
             #data_path_weights_filename,
@@ -155,12 +130,6 @@ def train_model(config, optimizer, model_dir):
     with open(f'{model_dir}/trainHistoryDict', 'wb') as file_pi:
         pickle.dump(history.history, file_pi)
 
-    # save model
-
-    save_dir = os.path.join(model_dir, "saved_model")
-    os.makedirs(save_dir, exist_ok=True)
-    tf.saved_model.save(model, save_dir)
-
     end_time = datetime.datetime.now()
     utils.print_timedelta(start_time, end_time)
     return model, history
@@ -177,6 +146,17 @@ def load_checkpoint(config, untrained_model, model_dir):
     return tf.keras.models.load_model(latest_checkpoint)
 
 
+def eval_model(config, model, x_test, y_test_shifted, y_test, batch_size):
+    # load best weights
+    model.load_weights(f"{model_dir}/checkpoints")
+    results = model.evaluate([x_test, y_test_shifted], y_test, batch_size=batch_size)
+    
+    print("trained model - test loss (mse)", results)
+
+    save_dir = os.path.join(model_dir, "saved_model")
+    os.makedirs(save_dir, exist_ok=True)
+    tf.saved_model.save(model, save_dir)
+
 
 #----
 config, log_dir, model_dir = setup_tf(config_file)
@@ -185,7 +165,7 @@ x_train, y_train_shifted, y_train, x_test, y_test_shifted, y_test, x_val, y_val_
 n_seq, encoder_seq_length, d_input = x_train.shape
 n_seq, decoder_seq_length, d_output = y_train.shape
 
-model, optimizer = build_transformer(config, encoder_seq_length, decoder_seq_length, d_output)
+model, optimizer = utils.build_transformer(config, encoder_seq_length, decoder_seq_length, d_output)
 
 model, history = train_model(config, optimizer, model_dir)
 
