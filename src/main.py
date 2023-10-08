@@ -35,18 +35,22 @@ def load_data(config):
     
     # Load data and data specific parameters
     # Load data and data specific parameters
-    train_test_ratio = config["data"]["train_test_ratio"]
+    train_test_val_ratio = config["data"]["train_test_ratio"]
     X, Y = utils.get_spring_mass_damper_data(data_dir)
-    x_train, x_test, y_train, y_test = utils.split_data(X, Y, train_test_ratio)
+    x_train, x_test, x_val, y_train, y_test, y_val = utils.split_data(X, Y, train_test_val_ratio)
 
     y_train_shifted = utils.shift(y_train) # decoder input
-    y_test_shifted = utils.shift(y_test) 
+    y_test_shifted = utils.shift(y_test)
+    y_val_shifted = utils.shift(y_val)
+
 
     # ensure returned values are TF tensors
     x_train = tf.convert_to_tensor(x_train, dtype=tf.float32)
     y_train = tf.convert_to_tensor(y_train, dtype=tf.float32)
     x_test = tf.convert_to_tensor(x_test, dtype=tf.float32)
     y_test = tf.convert_to_tensor(y_test, dtype=tf.float32)
+    x_val = tf.convert_to_tensor(x_val, dtype=tf.float32)
+    y_val = tf.convert_to_tensor(y_val, dtype=tf.float32)
 
     # print info to console
     print(f"\nLoaded data from {data_dir}")
@@ -54,7 +58,7 @@ def load_data(config):
     print(f"Decoder input and output shape: {y_train.shape}")
     print("Shapes are in order (N_sim, N_timesteps, N_dof) and (N_batch, N_timesteps, d_model) internally.\n")
 
-    return x_train, y_train_shifted, y_train, x_test, y_test_shifted, y_test
+    return x_train, y_train_shifted, y_train, x_test, y_test_shifted, y_test, x_val, y_val_shifted, y_val
 
 
 def build_model(config, encoder_seq_length, decoder_seq_length, d_output):
@@ -120,7 +124,7 @@ def train_model(config, optimizer):
     # train model
     history = model.fit(x=[x_train, y_train_shifted],
                         y=y_train,
-                        validation_data=([x_test, y_test_shifted], y_test),
+                        validation_data=([x_val, y_val_shifted], y_val),
                         epochs=epochs,
                         batch_size=batch_size,
                         callbacks=callbacks,
@@ -147,7 +151,7 @@ def load_checkpoint(config, untrained_model):
 #----
 
 log_dir = setup_tf(config)
-x_train, y_train_shifted, y_train, x_test, y_test_shifted, y_test = load_data(config)
+x_train, y_train_shifted, y_train, x_test, y_test_shifted, y_test, x_val, y_val_shifted, y_val = load_data(config)
 
 n_seq, encoder_seq_length, d_input = x_train.shape
 n_seq, decoder_seq_length, d_output = y_train.shape
@@ -183,20 +187,3 @@ results = model.evaluate([x_test, y_test_shifted], y_test, batch_size=batch_size
 print(results)
 
 # %%
-# load data
-# import pickle
-# import os
-# import numpy as np
-# with open('../../data/occupant_data_transformer.pkl', 'rb') as f:
-#     data = pickle.load(f)
-#     displacements_train = data['displacements_train']
-#     displacements_test = data['displacements_test']
-#     displacements_red_train = data['displacements_red_train']
-#     displacements_red_test = data['displacements_red_test']
-#     params_train = data['params_train']
-#     params_test = data['params_test']
-#     times_train = data['times_train']
-#     times_test = data['times_test']
-#     reference_coordinates_train = data['reference_coordinates_train']
-#     reference_coordinates_test = data['reference_coordinates_test']
-#     projection_matrix = data['projection_matrix']
