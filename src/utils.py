@@ -102,3 +102,26 @@ def print_timedelta(start_time, end_time):
     minutes, seconds = divmod(remainder, 60)
 
     print(f"Elapsed time: {hours} hours, {minutes} minutes, {seconds} seconds")
+
+
+def plot_train_and_val_loss(history, model_dir):
+    """Plot training and validation loss
+
+    Args:
+        history (tf.keras.callbacks.History): history object from model.fit()
+        model_dir (str): path to model directory to save plot
+    """
+    import matplotlib.pyplot as plt
+
+    plt.plot(history.history['mse'])
+    plt.plot(history.history['val_mse'])
+    plt.title('Model loss')
+    plt.ylabel('Loss (MSE)')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper right')
+    plt.savefig(f"{model_dir}/loss.png")
+    plt.savefig(f"{model_dir}/loss.svg")
+    plt.show()
+
+    
+    

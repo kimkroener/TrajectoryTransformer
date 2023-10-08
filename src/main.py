@@ -1,5 +1,6 @@
 # %% Imports
 import os
+import pickle
 import datetime
 import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
@@ -19,20 +20,21 @@ def setup_tf(config):
     # create a unique directory for the model
     model_name = config["model_name"]
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M")
-    model_dir = f"models/{model_name}_{timestamp}"
+    cwd = os.getcwd()
+    model_dir = f"{cwd}/models/{model_name}_{timestamp}"
     os.makedirs(model_dir, exist_ok=True)
-    
+
     # Set paths for data, logs, checkpoints
     log_dir_name = config["data"]["logs_dir_name"]
     log_dir = os.path.join(model_dir, log_dir_name)
-    
+
     #tf.debugging.experimental.enable_dump_debug_info(log_dir, tensor_debug_mode="FULL_HEALTH", circular_buffer_size=-1)
     tf.config.run_functions_eagerly(True)
     tf.data.experimental.enable_debug_mode()
 
     # create if they don't exist
     os.makedirs(log_dir, exist_ok=True)
-    
+
     return log_dir, model_dir
 
 
@@ -40,7 +42,7 @@ def load_data(config):
     data_dir = config["data"]["data_dir"]
     if not os.path.exists(data_dir):
         raise FileNotFoundError(f"Data directory {data_dir} does not exist.")
-    
+
     # Load data and data specific parameters
     train_test_val_ratio = config["data"]["train_test_ratio"]
     X, Y = utils.get_spring_mass_damper_data(data_dir)
@@ -88,7 +90,7 @@ def build_model(config, encoder_seq_length, decoder_seq_length, d_output):
                 loss="mse",
                 metrics=["mse"],
                 )
-    
+
     print("Compiled model, can start training...")
 
     return model, optimizer
@@ -96,28 +98,33 @@ def build_model(config, encoder_seq_length, decoder_seq_length, d_output):
 
 def train_model(config, optimizer, model_dir):
     epochs = config["training"]["epochs"]
-    batch_size = config["training"]["batch_size"]  
-    
+    batch_size = config["training"]["batch_size"]
+
     checkpoint_dir = os.path.join(model_dir, config["data"]["checkpoints_dir_name"])
     os.makedirs(checkpoint_dir, exist_ok=True)
-    data_path_weights_filename = os.path.join(model_dir, checkpoint_dir, "model_weights")
+    #data_path_weights_filename = os.path.join(model_dir, checkpoint_dir, "model_weights")
+
     # setup callbacks - tensorboard, checkpoints, early stopping
     tensorboard_cb = tf.keras.callbacks.TensorBoard(
         log_dir=log_dir,
-        histogram_freq=1
+        histogram_freq=1,
+        update_freq='epoch',
     )
 
     ckpt = tf.train.Checkpoint(model=model, optimizer=optimizer)
     manager = tf.train.CheckpointManager(ckpt, checkpoint_dir, max_to_keep=3)
 
     model_ckpt_cb = tf.keras.callbacks.ModelCheckpoint(
-            data_path_weights_filename,
+            #data_path_weights_filename,
+            filepath=checkpoint_dir, 
             monitor='loss',
             save_best_only=True,
             save_weights_only=True,
             verbose=1,
         )
     
+    csv_logger = tf.keras.callbacks.CSVLogger(f"{model_dir}/training.log", append=True)
+
     if config["training"]["early_stopping"]:
         early_stopping_cb = tf.keras.callbacks.EarlyStopping(
                 monitor='val_loss',
@@ -126,9 +133,9 @@ def train_model(config, optimizer, model_dir):
                 restore_best_weights=True
             )
 
-        callbacks = [model_ckpt_cb, tensorboard_cb, early_stopping_cb]
+        callbacks = [model_ckpt_cb, tensorboard_cb, csv_logger, early_stopping_cb]
     else:
-        callbacks = [model_ckpt_cb, tensorboard_cb]
+        callbacks = [model_ckpt_cb, tensorboard_cb, csv_logger]
 
 
     # train model
@@ -142,22 +149,27 @@ def train_model(config, optimizer, model_dir):
                         )
 
     print(history.history)
-    end_time = datetime.datetime.now()
-    utils.print_timedelta(start_time, end_time)
 
     # save model
     save_dir = os.path.join(model_dir, "saved_model")
     os.makedirs(save_dir, exist_ok=True)
     tf.saved_model.save(model, save_dir)
 
+    end_time = datetime.datetime.now()
+    utils.print_timedelta(start_time, end_time)
     return model, history
 
 
 def load_checkpoint(config, untrained_model, model_dir):
     checkpoint_dir = os.path.join(model_dir, config["data"]["checkpoints_dir"])
-    model = tf.train.checkpoint.restore(checkpoint_dir)
+    checkpoints = [checkpoint_dir + "/" + name for name in os.listdir(checkpoint_dir)]
 
-    return model
+    latest_checkpoint = max(checkpoints, key=os.path.getctime)
+    print("Restoring from", latest_checkpoint)
+
+    #model = tf.train.checkpoint.restore(checkpoint_dir)
+    return tf.keras.models.load_model(latest_checkpoint)
+
 
 
 #----
@@ -171,29 +183,18 @@ model, optimizer = build_model(config, encoder_seq_length, decoder_seq_length, d
 
 model, history = train_model(config, optimizer, model_dir)
 
+with open(f'{model_dir}/trainHistoryDict', 'wb') as file_pi:
+    pickle.dump(history.history, file_pi)
+
+utils.plot_train_and_val_loss(history, model_dir)
+
+
+
 # ----
-
-# metrics monitoring
-#train_loss = tf.keras.metrics.Mean(name='train_loss')
-
-
-# train_data = (x_train, y_train_shifted, y_train)
-# train_data = (x_train, y_train, y_train)
-
-
-# create masks, propagate them through functional API
-# mask_value = -1000
-# masking_layer = tf.keras.layers.Masking(mask_value)
-
-# masked_encoder_input = masking_layer(x_train)
-# masked_decoder_input = masking_layer(y_train_shifted)
-# masked_decoder_output = masking_layer(y_train)
-
-
 
 # # %% Evaluate model
 print("Evaluating model on test data...")
-batch_size = config["training"]["batch_size"]  
+batch_size = config["training"]["batch_size"]
 results = model.evaluate([x_test, y_test_shifted], y_test, batch_size=batch_size)
 print(results)
 
