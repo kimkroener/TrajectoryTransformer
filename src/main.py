@@ -1,5 +1,6 @@
 # %% Imports
 import os
+import datetime
 import tensorflow as tf
 from tensorflow.keras.optimizers import Adam
 
@@ -8,14 +9,22 @@ from lib.scheduler import LRScheduler
 import utils as utils
 
 # load config
-config_file = "src/test_config.yaml"
-config = utils.load_config(config_file)
+config_file = "test_config.yaml"
+config = utils.load_config(os.path.join("src/config_files", config_file))
+
 
 # %%
 
 def setup_tf(config):
+    # create a unique directory for the model
+    model_name = config["model_name"]
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M")
+    model_dir = f"models/{model_name}_{timestamp}"
+    os.makedirs(model_dir, exist_ok=True)
+    
     # Set paths for data, logs, checkpoints
-    log_dir = config["data"]["logs_dir"]
+    log_dir_name = config["data"]["logs_dir_name"]
+    log_dir = os.path.join(model_dir, log_dir_name)
     
     #tf.debugging.experimental.enable_dump_debug_info(log_dir, tensor_debug_mode="FULL_HEALTH", circular_buffer_size=-1)
     tf.config.run_functions_eagerly(True)
@@ -24,8 +33,7 @@ def setup_tf(config):
     # create if they don't exist
     os.makedirs(log_dir, exist_ok=True)
     
-    return log_dir
-
+    return log_dir, model_dir
 
 
 def load_data(config):
@@ -33,7 +41,6 @@ def load_data(config):
     if not os.path.exists(data_dir):
         raise FileNotFoundError(f"Data directory {data_dir} does not exist.")
     
-    # Load data and data specific parameters
     # Load data and data specific parameters
     train_test_val_ratio = config["data"]["train_test_ratio"]
     X, Y = utils.get_spring_mass_damper_data(data_dir)
@@ -87,20 +94,19 @@ def build_model(config, encoder_seq_length, decoder_seq_length, d_output):
     return model, optimizer
 
 
-def train_model(config, optimizer):
+def train_model(config, optimizer, model_dir):
     epochs = config["training"]["epochs"]
     batch_size = config["training"]["batch_size"]  
     
-   
+    checkpoint_dir = os.path.join(model_dir, config["data"]["checkpoints_dir_name"])
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    data_path_weights_filename = os.path.join(model_dir, checkpoint_dir, "model_weights")
     # setup callbacks - tensorboard, checkpoints, early stopping
     tensorboard_cb = tf.keras.callbacks.TensorBoard(
         log_dir=log_dir,
         histogram_freq=1
     )
 
-    checkpoint_dir = config["data"]["checkpoints_dir"]
-    os.makedirs(checkpoint_dir, exist_ok=True)
-    data_path_weights_filename = os.path.join(checkpoint_dir, "model_weights")
     ckpt = tf.train.Checkpoint(model=model, optimizer=optimizer)
     manager = tf.train.CheckpointManager(ckpt, checkpoint_dir, max_to_keep=3)
 
@@ -112,16 +118,21 @@ def train_model(config, optimizer):
             verbose=1,
         )
     
-    early_stopping_cb = tf.keras.callbacks.EarlyStopping(
-            monitor='val_loss',
-            patience=3,
-            verbose=1,
-            restore_best_weights=True
-        )
+    if config["training"]["early_stopping"]:
+        early_stopping_cb = tf.keras.callbacks.EarlyStopping(
+                monitor='val_loss',
+                patience=3,
+                verbose=1,
+                restore_best_weights=True
+            )
 
-    callbacks = [model_ckpt_cb, tensorboard_cb, early_stopping_cb]
+        callbacks = [model_ckpt_cb, tensorboard_cb, early_stopping_cb]
+    else:
+        callbacks = [model_ckpt_cb, tensorboard_cb]
+
 
     # train model
+    start_time = datetime.datetime.now()
     history = model.fit(x=[x_train, y_train_shifted],
                         y=y_train,
                         validation_data=([x_val, y_val_shifted], y_val),
@@ -131,26 +142,26 @@ def train_model(config, optimizer):
                         )
 
     print(history.history)
+    end_time = datetime.datetime.now()
+    utils.print_timedelta(start_time, end_time)
 
     # save model
-    save_dir = config["training"]["save_dir"]
+    save_dir = os.path.join(model_dir, "saved_model")
     os.makedirs(save_dir, exist_ok=True)
     tf.saved_model.save(model, save_dir)
 
     return model, history
 
 
-def load_checkpoint(config, untrained_model):
-    checkpoint_dir = config["data"]["checkpoints_dir"]
-    
+def load_checkpoint(config, untrained_model, model_dir):
+    checkpoint_dir = os.path.join(model_dir, config["data"]["checkpoints_dir"])
     model = tf.train.checkpoint.restore(checkpoint_dir)
 
     return model
 
 
 #----
-
-log_dir = setup_tf(config)
+log_dir, model_dir = setup_tf(config)
 x_train, y_train_shifted, y_train, x_test, y_test_shifted, y_test, x_val, y_val_shifted, y_val = load_data(config)
 
 n_seq, encoder_seq_length, d_input = x_train.shape
@@ -158,7 +169,7 @@ n_seq, decoder_seq_length, d_output = y_train.shape
 
 model, optimizer = build_model(config, encoder_seq_length, decoder_seq_length, d_output)
 
-model, history = train_model(config, optimizer)
+model, history = train_model(config, optimizer, model_dir)
 
 # ----
 

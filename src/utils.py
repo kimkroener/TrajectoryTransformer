@@ -88,3 +88,17 @@ def load_config(file_path):
     with open(file_path, "r") as yaml_file:
         config = yaml.safe_load(yaml_file)
     return config
+
+
+def print_timedelta(start_time, end_time):
+    """print elapsed time in format HH:MM:SS
+
+    Args:
+        start_time (datetime): start time
+        end_time (datetime): end time
+    """
+    timedelta = end_time - start_time
+    hours, remainder = divmod(timedelta.seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    print(f"Elapsed time: {hours} hours, {minutes} minutes, {seconds} seconds")

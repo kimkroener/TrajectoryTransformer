@@ -1,7 +1,9 @@
+model_name: "SMD_three-masses"
+
 data:
   data_dir: "./data/SMD_three-masses/"
-  logs_dir: "./logs/"
-  checkpoints_dir: "./checkpoints/"
+  logs_dir_name: "logs"
+  checkpoints_dir_name: "checkpoints"
   train_test_ratio: [0.5, 0.4 , 0.1] # Total data points 100
 
 architecture:
@@ -15,5 +17,6 @@ architecture:
 training:
   # optimizer
   epochs: 10 # can be increased early stopping is used
-  batch_size: 64 # adapt to GPU memory
-  save_dir: "./saved_model/TrajTraf_three-masses/"
+  batch_size: 64 # adapt to GPU memory, maximize
+  early_stopping: false
+  #save_dir: "./saved_model/TrajTraf_three-masses/"

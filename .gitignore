@@ -3,9 +3,7 @@
 /.vscode
 /src/Miniconda3-latest-Linux-x86_64.sh
 /data/
-
-saved_model/
-checkpoints/
+/models/
 src/data_generation/explore.py
 
 
