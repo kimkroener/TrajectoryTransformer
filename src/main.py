@@ -1,5 +1,6 @@
 # %% Imports
 import os
+import shutil
 import pickle
 import datetime
 import tensorflow as tf
@@ -11,12 +12,12 @@ import utils as utils
 
 # load config
 config_file = "test_config.yaml"
-config = utils.load_config(os.path.join("src/config_files", config_file))
-
 
 # %%
 
-def setup_tf(config):
+def setup_tf(config_file: str):
+    config = utils.load_config(os.path.join("src/config_files", config_file))
+
     # create a unique directory for the model
     model_name = config["model_name"]
     timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M")
@@ -24,18 +25,19 @@ def setup_tf(config):
     model_dir = f"{cwd}/models/{model_name}_{timestamp}"
     os.makedirs(model_dir, exist_ok=True)
 
-    # Set paths for data, logs, checkpoints
+    # copy config file for documentation
+    shutil.copy(config_file, model_dir)
+
+    # set paths for tf logs
     log_dir_name = config["data"]["logs_dir_name"]
     log_dir = os.path.join(model_dir, log_dir_name)
-
+    os.makedirs(log_dir, exist_ok=True)
+    
     #tf.debugging.experimental.enable_dump_debug_info(log_dir, tensor_debug_mode="FULL_HEALTH", circular_buffer_size=-1)
     tf.config.run_functions_eagerly(True)
     tf.data.experimental.enable_debug_mode()
 
-    # create if they don't exist
-    os.makedirs(log_dir, exist_ok=True)
-
-    return log_dir, model_dir
+    return config, log_dir, model_dir
 
 
 def load_data(config):
@@ -70,7 +72,7 @@ def load_data(config):
     return x_train, y_train_shifted, y_train, x_test, y_test_shifted, y_test, x_val, y_val_shifted, y_val
 
 
-def build_model(config, encoder_seq_length, decoder_seq_length, d_output):
+def build_transformer(config, encoder_seq_length, decoder_seq_length, d_output):
     # Transformer architecture params
     d_model = config["architecture"]["d_model"]  # Dimensionality of the latent space
     n_stacks = config["architecture"]["N_stacks"]  # Depth of encoder and decoder layers
@@ -123,7 +125,8 @@ def train_model(config, optimizer, model_dir):
             verbose=1,
         )
     
-    csv_logger = tf.keras.callbacks.CSVLogger(f"{model_dir}/training.log", append=True)
+    # works well, but slows down training
+    # csv_logger = tf.keras.callbacks.CSVLogger(f"{model_dir}/training.log", append=True)
 
     if config["training"]["early_stopping"]:
         early_stopping_cb = tf.keras.callbacks.EarlyStopping(
@@ -133,9 +136,9 @@ def train_model(config, optimizer, model_dir):
                 restore_best_weights=True
             )
 
-        callbacks = [model_ckpt_cb, tensorboard_cb, csv_logger, early_stopping_cb]
+        callbacks = [model_ckpt_cb, tensorboard_cb, early_stopping_cb] # , csv_logger]
     else:
-        callbacks = [model_ckpt_cb, tensorboard_cb, csv_logger]
+        callbacks = [model_ckpt_cb, tensorboard_cb]# , csv_logger]
 
 
     # train model
@@ -148,9 +151,12 @@ def train_model(config, optimizer, model_dir):
                         callbacks=callbacks,
                         )
 
-    print(history.history)
+    
+    with open(f'{model_dir}/trainHistoryDict', 'wb') as file_pi:
+        pickle.dump(history.history, file_pi)
 
     # save model
+
     save_dir = os.path.join(model_dir, "saved_model")
     os.makedirs(save_dir, exist_ok=True)
     tf.saved_model.save(model, save_dir)
@@ -173,18 +179,15 @@ def load_checkpoint(config, untrained_model, model_dir):
 
 
 #----
-log_dir, model_dir = setup_tf(config)
+config, log_dir, model_dir = setup_tf(config_file)
 x_train, y_train_shifted, y_train, x_test, y_test_shifted, y_test, x_val, y_val_shifted, y_val = load_data(config)
 
 n_seq, encoder_seq_length, d_input = x_train.shape
 n_seq, decoder_seq_length, d_output = y_train.shape
 
-model, optimizer = build_model(config, encoder_seq_length, decoder_seq_length, d_output)
+model, optimizer = build_transformer(config, encoder_seq_length, decoder_seq_length, d_output)
 
 model, history = train_model(config, optimizer, model_dir)
-
-with open(f'{model_dir}/trainHistoryDict', 'wb') as file_pi:
-    pickle.dump(history.history, file_pi)
 
 utils.plot_train_and_val_loss(history, model_dir)
 
